@@ -30,6 +30,11 @@
             
             <input type="password" id="passInput" placeholder="Contraseña de Administrador" class="w-full input-dark rounded-lg p-3 text-center tracking-widest mb-4" onkeypress="if(event.key === 'Enter') intentarLogin()">
             
+            <div class="flex items-center justify-center mb-6 text-slate-400 text-sm">
+                <input type="checkbox" id="rememberMe" class="mr-2 w-4 h-4 rounded border-slate-600 bg-slate-800 accent-blue-500 cursor-pointer">
+                <label for="rememberMe" class="cursor-pointer hover:text-white transition-colors">Mantener sesión iniciada</label>
+            </div>
+            
             <button onclick="intentarLogin()" id="btnLogin" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all flex justify-center items-center gap-2">
                 <i class="fas fa-lock-open"></i> Desbloquear Bóveda
             </button>
@@ -44,9 +49,15 @@
                 </h1>
                 <p class="text-xs sm:text-sm text-slate-400 mt-1">Gestor personal de sistemas y código fuente.</p>
             </div>
-            <button onclick="cargarDashboard()" class="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-3 sm:py-2 rounded-lg transition-colors flex justify-center items-center gap-2">
-                <i class="fas fa-sync-alt"></i> Refrescar
-            </button>
+            
+            <div class="flex gap-2 w-full sm:w-auto mt-2 sm:mt-0">
+                <button onclick="cargarDashboard()" class="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-3 sm:py-2 rounded-lg transition-colors flex justify-center items-center gap-2">
+                    <i class="fas fa-sync-alt"></i> Refrescar
+                </button>
+                <button onclick="cerrarSesion()" class="flex-1 sm:flex-none bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 px-4 py-3 sm:py-2 rounded-lg transition-colors flex justify-center items-center gap-2" title="Cerrar Sesión">
+                    <i class="fas fa-sign-out-alt"></i> Salir
+                </button>
+            </div>
         </header>
 
         <div class="flex flex-col lg:flex-row gap-6 flex-1">
@@ -102,13 +113,21 @@
     </div>
 
     <script>
-        // TU NUEVA URL DE GOOGLE SCRIPT INTEGRADA
         const URL_API = "https://script.google.com/macros/s/AKfycbz2I7AgUS8aaqoxjPnQ8AH4cH7WWYKZAjqtPo7xoK7D7AGcFEB9T7JEWWJo5q1gWBErQA/exec";
         const TU_GITHUB_PAGES = "https://yumi-dev-workspace.github.io/lumina-vault/";
         
         let sistemasGlobal = []; 
         let toastTimeout;
         let tokenSesion = ""; 
+
+        // Auto-Login: Verifica si marcaste "Recuérdame" anteriormente
+        window.onload = () => {
+            const tokenGuardado = localStorage.getItem('lumina_vault_token');
+            if(tokenGuardado) {
+                document.getElementById('passInput').value = tokenGuardado;
+                intentarLogin(true); // El true indica que es un inicio de sesión automático
+            }
+        };
 
         function mostrarToast(mensaje, tipo = 'success') {
             const toast = document.getElementById('toast');
@@ -125,9 +144,10 @@
             }, 3000);
         }
 
-        function intentarLogin() {
+        function intentarLogin(esAutoLogin = false) {
             const pass = document.getElementById('passInput').value;
             const btn = document.getElementById('btnLogin');
+            const mantenerSesion = document.getElementById('rememberMe').checked;
             
             if(!pass) return mostrarToast("Ingresa una contraseña", "error");
             
@@ -141,21 +161,34 @@
             .then(res => res.json())
             .then(data => {
                 if(data.error) {
-                    mostrarToast("Acceso Denegado: Contraseña incorrecta", "error");
+                    if(!esAutoLogin) mostrarToast("Acceso Denegado: Contraseña incorrecta", "error");
                     btn.innerHTML = '<i class="fas fa-lock-open"></i> Desbloquear Bóveda';
                     document.getElementById('passInput').value = '';
+                    localStorage.removeItem('lumina_vault_token'); // Borra memoria si la contraseña ya no sirve
                 } else {
                     tokenSesion = pass;
+                    
+                    // Si el usuario marcó la casilla, guarda la contraseña en el navegador
+                    if(mantenerSesion && !esAutoLogin) {
+                        localStorage.setItem('lumina_vault_token', pass);
+                    }
+
                     document.getElementById('pantalla-login').classList.add('hidden');
                     document.getElementById('panel-principal').classList.remove('hidden');
                     document.getElementById('panel-principal').classList.add('flex');
-                    mostrarToast("¡Bienvenido a Lumina Vault!", "success");
+                    if(!esAutoLogin) mostrarToast("¡Bienvenido a Lumina Vault!", "success");
                     renderizarLista(data.sistemas || []);
                 }
             }).catch(() => {
                 mostrarToast('Error de red. Revisa tu conexión.', 'error');
                 btn.innerHTML = '<i class="fas fa-lock-open"></i> Desbloquear Bóveda';
             });
+        }
+
+        // --- SISTEMA PARA CERRAR SESIÓN ---
+        function cerrarSesion() {
+            localStorage.removeItem('lumina_vault_token');
+            location.reload(); // Recarga la página para mostrar el login de nuevo
         }
 
         function cargarDashboard() {
