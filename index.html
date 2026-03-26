@@ -2,34 +2,72 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lumina Vault Workspace</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><path fill='%233b82f6' d='M234.5 5.7c13.9-5 29.1-5 43.1 0l192 68.6C485 80 496 95.3 496 112v288c0 16.7-11 32-26.5 37.7l-192 68.6c-13.9 5-29.1 5-43.1 0l-192-68.6C27 432 16 416.7 16 400V112c0-16.7 11-32 26.5-37.7l192-68.6zM256 261.3L441.2 195 256 128.7 70.8 195 256 261.3zM464 246.7L272 315.4V461.9l192-68.6V246.7zM240 461.9V315.4L48 246.7V393.3l192 68.6z'/></svg>">
-    <style>body { background-color: #0f172a; color: #94a3b8; font-family: monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }</style>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #0b1121; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .glass-panel { background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); }
+    </style>
 </head>
-<body>
-    <div id="mensaje">Conectando a Lumina Vault...</div>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div id="status-card" class="glass-panel p-8 rounded-2xl w-full max-w-sm shadow-2xl border-t-4 border-blue-500 text-center relative overflow-hidden transition-colors duration-500">
+        <div class="absolute -top-10 -right-10 w-32 h-32 bg-blue-500/20 rounded-full blur-2xl"></div>
+        
+        <div id="icono-estado" class="mb-5">
+            <i class="fas fa-cube text-6xl text-blue-500 animate-pulse drop-shadow-lg"></i>
+        </div>
+        
+        <h1 class="text-2xl font-bold text-white mb-2 tracking-wide">Lumina Vault</h1>
+        
+        <div class="mt-6 bg-slate-900/60 p-4 rounded-lg border border-slate-700/50">
+            <p id="mensaje" class="text-sm font-mono text-slate-300">
+                <i class="fas fa-circle-notch fa-spin text-blue-400 mr-2"></i> Estableciendo conexión...
+            </p>
+        </div>
+    </div>
 
     <script>
-        // TU NUEVO GOOGLE SCRIPT INTEGRADO
-        const URL_API = "https://script.google.com/macros/s/AKfycbz2I7AgUS8aaqoxjPnQ8AH4cH7WWYKZAjqtPo7xoK7D7AGcFEB9T7JEWWJo5q1gWBErQA/exec";
-
+        // TU URL DE GOOGLE SCRIPT
+        const URL_API = "https://script.google.com/macros/s/AKfycbxq_ak7-Sip9ZHB-b2Lexotf-gV1cM9Cky7o8gyek2jEgUHbjC6VyaXqv6pGjMNr-KnZQ/exec";
+        
         const urlParams = new URLSearchParams(window.location.search);
         const idSistema = urlParams.get('id');
+        
+        const msgEl = document.getElementById('mensaje');
+        const iconEl = document.getElementById('icono-estado');
+        const cardEl = document.getElementById('status-card');
 
         if(idSistema) {
             fetch(URL_API + "?id=" + idSistema)
             .then(respuesta => respuesta.json())
             .then(datos => {
                 if(datos.success) {
+                    // Si todo sale bien, la página se borra y muestra tu código
                     document.open();
                     document.write(datos.html);
                     document.close();
                 } else {
-                    document.getElementById('mensaje').innerText = "Error: " + datos.mensaje;
+                    // Error: El ID no existe
+                    iconEl.innerHTML = '<i class="fas fa-exclamation-triangle text-6xl text-red-500 drop-shadow-lg"></i>';
+                    cardEl.classList.replace('border-blue-500', 'border-red-500');
+                    msgEl.innerHTML = `<span class="text-red-400"><i class="fas fa-times-circle mr-1"></i> ${datos.mensaje}</span>`;
                 }
-            }).catch(() => document.getElementById('mensaje').innerText = "Error de conexión con el servidor de la bóveda.");
+            }).catch(() => {
+                // Error de Internet
+                iconEl.innerHTML = '<i class="fas fa-wifi text-6xl text-red-500 drop-shadow-lg opacity-50"></i>';
+                cardEl.classList.replace('border-blue-500', 'border-red-500');
+                msgEl.innerHTML = '<span class="text-red-400"><i class="fas fa-plug mr-1"></i> Error de conexión con el servidor.</span>';
+            });
         } else {
-            document.getElementById('mensaje').innerText = "[LUMINA VAULT] - Sistema central en línea. Requiere un ID válido para renderizar.";
+            // Entraste al link principal sin un ID
+            iconEl.innerHTML = '<i class="fas fa-shield-alt text-6xl text-emerald-500 drop-shadow-lg"></i>';
+            cardEl.classList.replace('border-blue-500', 'border-emerald-500');
+            msgEl.innerHTML = '<span class="text-emerald-400"><i class="fas fa-check mr-1"></i> Sistema central en línea.<br><br><span class="text-slate-400 text-xs">Requiere el ID del proyecto en la URL.</span></span>';
         }
     </script>
 </body>
