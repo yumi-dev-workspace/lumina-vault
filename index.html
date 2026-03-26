@@ -1,1 +1,36 @@
-index
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Lumina Vault Workspace</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><path fill='%233b82f6' d='M234.5 5.7c13.9-5 29.1-5 43.1 0l192 68.6C485 80 496 95.3 496 112v288c0 16.7-11 32-26.5 37.7l-192 68.6c-13.9 5-29.1 5-43.1 0l-192-68.6C27 432 16 416.7 16 400V112c0-16.7 11-32 26.5-37.7l192-68.6zM256 261.3L441.2 195 256 128.7 70.8 195 256 261.3zM464 246.7L272 315.4V461.9l192-68.6V246.7zM240 461.9V315.4L48 246.7V393.3l192 68.6z'/></svg>">
+    <style>body { background-color: #0f172a; color: #94a3b8; font-family: monospace; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }</style>
+</head>
+<body>
+    <div id="mensaje">Conectando a Lumina Vault...</div>
+
+    <script>
+        // TU NUEVO GOOGLE SCRIPT INTEGRADO
+        const URL_API = "https://script.google.com/macros/s/AKfycbxq_ak7-Sip9ZHB-b2Lexotf-gV1cM9Cky7o8gyek2jEgUHbjC6VyaXqv6pGjMNr-KnZQ/exec";
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const idSistema = urlParams.get('id');
+
+        if(idSistema) {
+            fetch(URL_API + "?id=" + idSistema)
+            .then(respuesta => respuesta.json())
+            .then(datos => {
+                if(datos.success) {
+                    document.open();
+                    document.write(datos.html);
+                    document.close();
+                } else {
+                    document.getElementById('mensaje').innerText = "Error: " + datos.mensaje;
+                }
+            }).catch(() => document.getElementById('mensaje').innerText = "Error de conexión con el servidor de la bóveda.");
+        } else {
+            document.getElementById('mensaje').innerText = "[LUMINA VAULT] - Sistema central en línea. Requiere un ID válido para renderizar.";
+        }
+    </script>
+</body>
+</html>
