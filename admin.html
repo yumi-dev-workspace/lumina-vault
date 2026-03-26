@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumina Vault - Admin</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #0b1121; color: #e2e8f0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .glass-panel { background: rgba(30, 41, 59, 0.5); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.05); }
+        .input-dark { background-color: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255, 255, 255, 0.1); color: white; }
+        .input-dark:focus { border-color: #3b82f6; outline: none; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    </style>
+</head>
+<body class="p-4 md:p-8 h-screen flex flex-col">
+
+    <div id="toast" class="fixed bottom-5 right-5 px-6 py-4 rounded-lg shadow-2xl text-white font-bold transition-all duration-300 transform translate-y-20 opacity-0 z-50 flex items-center gap-3 pointer-events-none"></div>
+
+    <header class="flex justify-between items-center mb-8 shrink-0">
+        <div>
+            <h1 class="text-3xl font-bold text-white tracking-wide flex items-center gap-3">
+                <i class="fas fa-cube text-blue-500"></i> Lumina Vault <span class="text-slate-500 font-light text-lg ml-2">Dev Workspace</span>
+            </h1>
+            <p class="text-sm text-slate-400 mt-1">Gestor personal de sistemas y código fuente.</p>
+        </div>
+        <button onclick="cargarDashboard()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+            <i class="fas fa-sync-alt"></i> Refrescar Base de Datos
+        </button>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 flex-1 min-h-0">
+        
+        <div class="glass-panel rounded-xl flex flex-col overflow-hidden lg:col-span-1">
+            <div class="p-4 border-b border-slate-700/50 bg-slate-800/30 flex justify-between items-center">
+                <h2 class="font-bold text-white"><i class="fas fa-list-ul mr-2 text-blue-400"></i> Mis Sistemas Guardados</h2>
+                <span id="contador-sistemas" class="bg-blue-500/20 text-blue-400 text-xs px-2 py-1 rounded font-bold">0</span>
+            </div>
+            
+            <div id="lista-sistemas" class="p-4 overflow-y-auto flex-1 space-y-3">
+                <p class="text-slate-500 text-sm text-center mt-10"><i class="fas fa-spinner fa-spin text-2xl mb-2"></i><br>Cargando bóveda...</p>
+            </div>
+        </div>
+
+        <div class="glass-panel rounded-xl flex flex-col lg:col-span-2 overflow-hidden h-full">
+            <div class="p-4 border-b border-slate-700/50 bg-slate-800/30">
+                <h2 id="titulo-editor" class="font-bold text-white text-lg"><i class="fas fa-plus-circle mr-2 text-emerald-400"></i> Integrar Nuevo Sistema</h2>
+            </div>
+
+            <div class="p-6 flex-1 overflow-y-auto space-y-5">
+                <input type="hidden" id="editId" value="">
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-2">Nombre / Etiqueta del Proyecto</label>
+                        <input type="text" id="nombre" placeholder="Ej: Gestor de Tareas Lumina" class="w-full input-dark rounded-lg p-3 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-400 uppercase mb-2">URL Personalizada (Opcional)</label>
+                        <div class="flex">
+                            <span class="bg-slate-800 border border-slate-700 border-r-0 rounded-l p-3 text-slate-500 text-sm">?id=</span>
+                            <input type="text" id="idPersonalizado" placeholder="mi-sistema-genial" class="w-full input-dark rounded-r p-3 text-sm font-mono">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex-1 flex flex-col h-[350px]">
+                    <label class="block text-xs font-semibold text-slate-400 uppercase mb-2 flex justify-between">
+                        <span>Código Fuente (HTML/JS/CSS)</span>
+                        <button onclick="limpiarEditor()" class="text-slate-500 hover:text-red-400 transition-colors"><i class="fas fa-eraser"></i> Limpiar</button>
+                    </label>
+                    <textarea id="htmlCode" placeholder="<!DOCTYPE html>..." class="w-full flex-1 input-dark rounded-lg p-4 text-sm font-mono resize-none"></textarea>
+                </div>
+
+                <div class="flex gap-4 pt-2">
+                    <button onclick="cancelarEdicion()" id="btnCancelar" class="hidden bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-lg transition-all w-1/3">
+                        Cancelar Edición
+                    </button>
+                    <button onclick="guardarSistema()" id="btnGuardar" class="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all flex justify-center items-center gap-2">
+                        <i class="fas fa-cloud-upload-alt"></i> Guardar en la Bóveda
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // TUS NUEVAS URLS INTEGRADAS
+        const URL_API = "https://script.google.com/macros/s/AKfycbxq_ak7-Sip9ZHB-b2Lexotf-gV1cM9Cky7o8gyek2jEgUHbjC6VyaXqv6pGjMNr-KnZQ/exec";
+        const TU_GITHUB_PAGES = "https://yumi-dev-workspace.github.io/lumina-vault/";
+        
+        let sistemasGlobal = []; 
+        let toastTimeout;
+
+        window.onload = cargarDashboard;
+
+        function mostrarToast(mensaje, tipo = 'success') {
+            const toast = document.getElementById('toast');
+            clearTimeout(toastTimeout);
+            let bgClass = tipo === 'success' ? 'bg-emerald-600' : (tipo === 'info' ? 'bg-blue-600' : 'bg-red-600');
+            let iconClass = tipo === 'success' ? 'fa-check-circle' : (tipo === 'info' ? 'fa-info-circle' : 'fa-exclamation-triangle');
+            
+            toast.className = `fixed bottom-5 right-5 px-6 py-4 rounded-lg shadow-2xl text-white font-bold transition-all duration-300 z-50 flex items-center gap-3 transform translate-y-0 opacity-100 ${bgClass}`;
+            toast.innerHTML = `<i class="fas ${iconClass} text-xl"></i> <span>${mensaje}</span>`;
+
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+
+        function cargarDashboard() {
+            const datos = new URLSearchParams();
+            datos.append('adminPass', 'AndresAdmin2026');
+            datos.append('accion', 'dashboard');
+
+            fetch(URL_API, { method: 'POST', body: datos })
+            .then(res => res.json())
+            .then(data => {
+                sistemasGlobal = data.sistemas || []; 
+                document.getElementById('contador-sistemas').innerText = sistemasGlobal.length;
+                const contenedor = document.getElementById('lista-sistemas');
+                contenedor.innerHTML = '';
+                
+                if(sistemasGlobal.length === 0) {
+                    contenedor.innerHTML = '<p class="text-slate-500 text-sm text-center mt-10">La bóveda está vacía.</p>';
+                } else {
+                    sistemasGlobal.forEach(sis => {
+                        const link = TU_GITHUB_PAGES + "?id=" + sis.id;
+                        contenedor.innerHTML += `
+                            <div class="bg-slate-900/50 border border-slate-700/50 p-4 rounded-lg hover:border-blue-500/30 transition-all group">
+                                <div class="flex justify-between items-start mb-3">
+                                    <div class="overflow-hidden">
+                                        <h3 class="font-bold text-white text-sm truncate">${sis.nombre}</h3>
+                                        <p class="text-xs text-blue-400 font-mono mt-1 truncate">?id=${sis.id}</p>
+                                    </div>
+                                    <span class="text-[10px] text-slate-500 shrink-0 ml-2">${sis.fecha}</span>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="window.open('${link}', '_blank')" class="flex-1 bg-slate-700 hover:bg-emerald-600 text-white text-xs py-1.5 rounded transition-colors" title="Ver en vivo">
+                                        <i class="fas fa-external-link-alt"></i> Ver
+                                    </button>
+                                    <button onclick="copiarDirecto('${link}')" class="flex-1 bg-slate-700 hover:bg-blue-600 text-white text-xs py-1.5 rounded transition-colors" title="Copiar Enlace">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                    <button onclick="prepararEdicion('${sis.id}')" class="bg-slate-700 hover:bg-orange-500 text-white text-xs px-3 rounded transition-colors" title="Editar">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
+                                    <button onclick="eliminarSistema('${sis.id}', '${sis.nombre}')" class="bg-slate-700 hover:bg-red-600 text-white text-xs px-3 rounded transition-colors" title="Eliminar">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+            }).catch(() => mostrarToast('Error al conectar con Lumina Vault', 'error'));
+        }
+
+        function prepararEdicion(id) {
+            const sistema = sistemasGlobal.find(s => s.id === id);
+            if(!sistema) return;
+
+            document.getElementById('editId').value = id;
+            document.getElementById('nombre').value = sistema.nombre;
+            document.getElementById('idPersonalizado').value = sistema.id;
+            document.getElementById('idPersonalizado').disabled = true; 
+            document.getElementById('idPersonalizado').classList.add('opacity-50');
+            document.getElementById('htmlCode').value = sistema.codigo;
+            
+            document.getElementById('titulo-editor').innerHTML = `<i class="fas fa-pen mr-2 text-orange-400"></i> Editando: ${sistema.nombre}`;
+            const btn = document.getElementById('btnGuardar');
+            btn.innerHTML = '<i class="fas fa-save"></i> Actualizar Código Fuente';
+            btn.className = "flex-1 bg-orange-600 hover:bg-orange-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all flex justify-center items-center gap-2";
+            
+            document.getElementById('btnCancelar').classList.remove('hidden');
+            mostrarToast('Cargado en el editor', 'info');
+        }
+
+        function cancelarEdicion() {
+            limpiarEditor();
+            document.getElementById('titulo-editor').innerHTML = `<i class="fas fa-plus-circle mr-2 text-emerald-400"></i> Integrar Nuevo Sistema`;
+            const btn = document.getElementById('btnGuardar');
+            btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Guardar en la Bóveda';
+            btn.className = "flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-3 px-4 rounded-lg shadow-lg transition-all flex justify-center items-center gap-2";
+            document.getElementById('btnCancelar').classList.add('hidden');
+        }
+
+        function limpiarEditor() {
+            document.getElementById('editId').value = '';
+            document.getElementById('nombre').value = '';
+            document.getElementById('idPersonalizado').value = '';
+            document.getElementById('idPersonalizado').disabled = false;
+            document.getElementById('idPersonalizado').classList.remove('opacity-50');
+            document.getElementById('htmlCode').value = '';
+        }
+
+        function guardarSistema() {
+            const idEdicion = document.getElementById('editId').value;
+            const nombre = document.getElementById('nombre').value;
+            const codigo = document.getElementById('htmlCode').value;
+            const idPersonalizado = document.getElementById('idPersonalizado').value;
+            const btn = document.getElementById('btnGuardar');
+            
+            if(!nombre || !codigo) return mostrarToast("Asigna un nombre y pega el código HTML.", "error");
+
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Procesando...';
+            
+            const datos = new URLSearchParams();
+            datos.append('adminPass', 'AndresAdmin2026');
+            datos.append('accion', idEdicion ? 'editar' : 'guardar');
+            if(idEdicion) datos.append('idEdicion', idEdicion);
+            datos.append('nombreSistema', nombre);
+            datos.append('codigoHtml', codigo);
+            if(!idEdicion) datos.append('idPersonalizado', idPersonalizado);
+
+            fetch(URL_API, { method: 'POST', body: datos })
+            .then(res => res.json())
+            .then(data => {
+                if(idEdicion) {
+                    mostrarToast("Sistema actualizado exitosamente.", "success");
+                } else {
+                    mostrarToast("Nuevo sistema alojado en Lumina Vault.", "success");
+                    copiarDirecto(TU_GITHUB_PAGES + "?id=" + data.id);
+                }
+                cancelarEdicion();
+                cargarDashboard(); 
+            });
+        }
+
+        function eliminarSistema(id, nombre) {
+            if(confirm(`⚠️ ALERTA: ¿Estás seguro de que deseas eliminar permanentemente el sistema "${nombre}"? Esta acción borrará el código de tu Google Sheet y romperá el enlace de GitHub.`)) {
+                
+                mostrarToast("Eliminando de la bóveda...", "info");
+                
+                const datos = new URLSearchParams();
+                datos.append('adminPass', 'AndresAdmin2026');
+                datos.append('accion', 'eliminar');
+                datos.append('idEliminar', id);
+
+                fetch(URL_API, { method: 'POST', body: datos })
+                .then(res => res.json())
+                .then(data => {
+                    if(data.success) {
+                        mostrarToast("Sistema purgado correctamente.", "success");
+                        if(document.getElementById('editId').value === id) cancelarEdicion();
+                        cargarDashboard();
+                    } else {
+                        mostrarToast("Error al intentar eliminar.", "error");
+                    }
+                });
+            }
+        }
+
+        function copiarDirecto(texto) {
+            navigator.clipboard.writeText(texto).then(() => mostrarToast("Enlace de Lumina Vault copiado al portapapeles.", "success"));
+        }
+    </script>
+</body>
+</html>
